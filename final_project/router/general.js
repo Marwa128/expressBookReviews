@@ -33,23 +33,41 @@ public_users.post("/register", (req,res) => {
 });
 
 // Get the book list available in the shop
-public_users.get("/", async function (req, res) {
+
+public_users.get("/api/books", function (req, res) {
+    res.json(books);
+  });
+  public_users.get("/", async function (req, res) {
+    try {
+      const response = await axios.get("http://localhost:5000/api/books");
+      res.send(JSON.stringify(response.data, null, 4));
+    } catch (error) {
+      res.status(500).json({
+        message: "Error retrieving books"
+      });
+    }
+  });
+// Get book details based on ISBN
+public_users.get("/isbn/:isbn", async function (req, res) {
+  const isbn = req.params.isbn;
+
   try {
-    const response = await axios.get("http://localhost:5000/books");
-    res.send(JSON.stringify(response.data, null, 4));
+    const response = await axios.get("http://localhost:5000/");
+    const book = response.data[isbn];
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found"
+      });
+    }
+
+    res.send(JSON.stringify(book, null, 4));
   } catch (error) {
     res.status(500).json({
-      message: "Error retrieving books"
+      message: "Error retrieving book details"
     });
   }
 });
-
-// Get book details based on ISBN
-public_users.get('/isbn/:isbn',function (req, res) {
-  //Write your code here
-  const isbn = req.params.isbn;
-  res.send(JSON.stringify(books[isbn], null, 4));
- });
   
 // Get book details based on author
 public_users.get("/author/:author", async function (req, res) {
