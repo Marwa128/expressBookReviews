@@ -52,19 +52,19 @@ public_users.get('/isbn/:isbn',function (req, res) {
  });
   
 // Get book details based on author
-public_users.get('/author/:author',function (req, res) {
-  //Write your code here
+public_users.get("/author/:author", async function (req, res) {
   const author = req.params.author;
-  const result = [];
-  const keys = Object.keys(books);
 
-  for (let i = 0; i < keys.length; i++) {
-    if (books[keys[i]].author === author) {
-      result.push(books[keys[i]]);
-    }
+  try {
+    const response = await axios.get("رابط مصدر الكتب في مشروعك");
+    const result = Object.keys(response.data)
+      .filter((key) => response.data[key].author === author)
+      .map((key) => response.data[key]);
+
+    res.send(JSON.stringify(result, null, 4));
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving books" });
   }
-
-  res.send(JSON.stringify(result, null, 4));
 });
 
 // Get all books based on title
