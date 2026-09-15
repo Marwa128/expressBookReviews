@@ -5,13 +5,21 @@ const regd_users = express.Router();
 
 let users = [];
 
-const isValid = (username)=>{ //returns boolean
-//write code to check is the username is valid
-}
+const isValid = (username) => {
+  const matchingUsers = registeredUsers.filter(function (user) {
+    return user.username === username;
+  });
 
-const authenticatedUser = (username,password)=>{ //returns boolean
-//write code to check if username and password match the one we have in records.
-}
+  return matchingUsers.length > 0;
+};
+
+const authenticatedUser = (username, password) => {
+  const validUsers = users.filter(function (user) {
+    return user.username === username && user.password === password;
+  });
+
+  return validUsers.length > 0;
+};
 
 //only registered users can login
 regd_users.post("/login", (req,res) => {
@@ -64,21 +72,33 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
   res.send(books[isbn]);
 });
 
-regd_users.delete("/auth/review/:isbn", (req, res) => {
+regd_users.delete("/auth/review/:isbn", function (req, res) {
   const isbn = req.params.isbn;
-  const username = req.session.authorization.username;
+  const username = req.session.username;
 
-  if (!books[isbn]) {
-    return res.status(404).send("Book not found");
+  if (!username) {
+    return res.status(401).json({
+      message: "User is not authenticated",
+    });
   }
 
-  if (!books[isbn].reviews || !books[isbn].reviews[username]) {
-    return res.status(404).send("Review not found");
+  if (!books[isbn] || !books[isbn].reviews) {
+    return res.status(404).json({
+      message: "Book or reviews not found",
+    });
+  }
+
+  if (!books[isbn].reviews[username]) {
+    return res.status(404).json({
+      message: "Review not found for this user",
+    });
   }
 
   delete books[isbn].reviews[username];
 
-  res.send("Review deleted successfully");
+  res.json({
+    message: "Review deleted successfully",
+  });
 });
 
 module.exports.authenticated = regd_users;
