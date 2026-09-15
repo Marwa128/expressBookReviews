@@ -86,22 +86,27 @@ public_users.get("/author/:author", async function (req, res) {
 });
 
 // Get all books based on title
-public_users.get('/title/:title',function (req, res) {
-  //Write your code here
-  const title = req.params.title;
-  const booksByTitle = [];
-  const keys = Object.keys(books);
-
-  for (let i = 0; i < keys.length; i++) {
-    const book = books[keys[i]];
-
-    if (book.title === title) {
-      booksByTitle.push(book);
+public_users.get("/title/:title", async function (req, res) {
+    const title = req.params.title;
+  
+    try {
+      const response = await axios.get("http://localhost:5000/api/books");
+      const allBooks = response.data;
+      const result = [];
+  
+      Object.keys(allBooks).forEach((key) => {
+        if (allBooks[key].title === title) {
+          result.push(allBooks[key]);
+        }
+      });
+  
+      res.send(JSON.stringify(result, null, 4));
+    } catch (error) {
+      res.status(500).json({
+        message: "Error retrieving books"
+      });
     }
-  }
-
-  res.send(JSON.stringify(booksByTitle, null, 4));
-});
+  });
 
 //  Get book review
 public_users.get('/review/:isbn',function (req, res) {
