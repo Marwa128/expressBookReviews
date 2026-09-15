@@ -1,0 +1,3 @@
+curl -s https://api.github.com/repos/Marwa128/expressBookReviews | jq '.pa
+rent.full_name'
+"ibm-developer-skills-network/expressBookReviews"
