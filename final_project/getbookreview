@@ -1,2 +1,4 @@
 curl http://localhost:5000/review/1
-{}
+{
+    "student2": "Test review"
+}
