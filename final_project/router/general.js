@@ -5,12 +5,12 @@ let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
 
-// Helper function to check if the username already exists
+// Helper function to check if the username already exists in the system
 const doesExist = (username) => {
   return users.some((user) => user.username === username);
 };
 
-// Register a new user route
+// Route to handle user registration
 public_users.post("/register", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
@@ -25,84 +25,79 @@ public_users.post("/register", (req, res) => {
   }
 });
 
-// Task 10: Get the book list available in the shop using async/await
+// Task 10: Get the list of all books available in the shop using async/await
 public_users.get('/', async (req, res) => {
   try {
-    const getBooks = async () => {
-      return books;
-    };
-    const allBooks = await getBooks();
-    return res.status(200).json(allBooks);
+    // Asynchronously fetch all books using Promise resolution
+    const allBooks = await Promise.resolve(books);
+    return res.status(200).send(JSON.stringify(allBooks, null, 4));
   } catch (error) {
-    return res.status(500).json({ message: "Failed to retrieve books", error: error.message });
+    return res.status(500).json({ message: error.message });
   }
 });
 
-// Task 11: Get book details based on ISBN using async/await with informative error handling
+// Task 11: Get book details based on ISBN using async/await
 public_users.get('/isbn/:isbn', async (req, res) => {
   const targetISBN = req.params.isbn;
   try {
-    const getBookByISBN = async () => {
-      const book = books[targetISBN];
-      if (!book) {
-        throw new Error(`Book not found for ISBN: ${targetISBN}`);
-      }
-      return book;
-    };
-    const bookDetails = await getBookByISBN();
-    return res.status(200).json(bookDetails);
+    // Asynchronously fetch book details by ISBN
+    const book = await Promise.resolve(books[targetISBN]);
+    if (!book) {
+      return res.status(404).json({ message: "ISBN not found." });
+    }
+    return res.status(200).json(book);
   } catch (error) {
-    return res.status(404).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 });
 
-// Task 12: Get book details based on author using async/await with query in error message
+// Task 12: Get book details based on author using async/await (optimized and direct)
 public_users.get('/author/:author', async (req, res) => {
   const authorParam = req.params.author.toLowerCase();
   try {
-    const getBooksByAuthor = async () => {
-      const matchingBooks = Object.values(books).filter(
+    // Directly filter books by author asynchronously without redundant inner functions
+    const matchingBooks = await Promise.resolve(
+      Object.values(books).filter(
         (book) => book.author && book.author.toLowerCase() === authorParam
-      );
-      if (matchingBooks.length === 0) {
-        throw new Error(`No books found for author: ${req.params.author}`);
-      }
-      return matchingBooks;
-    };
-    const result = await getBooksByAuthor();
-    return res.status(200).json(result);
+      )
+    );
+
+    if (matchingBooks.length === 0) {
+      return res.status(404).json({ message: "No books by that author." });
+    }
+    return res.status(200).send(JSON.stringify(matchingBooks, null, 4));
   } catch (error) {
-    return res.status(404).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 });
 
-// Task 13: Get all books based on title using async/await with query in error message
+// Task 13: Get all books based on title using async/await (optimized and direct)
 public_users.get('/title/:title', async (req, res) => {
   const titleParam = req.params.title.toLowerCase();
   try {
-    const getBookByTitle = async () => {
-      const matchingTitle = Object.values(books).find(
+    // Directly find book by title asynchronously without redundant inner functions
+    const matchingTitle = await Promise.resolve(
+      Object.values(books).find(
         (book) => book.title && book.title.toLowerCase() === titleParam
-      );
-      if (!matchingTitle) {
-        throw new Error(`No book found for title: ${req.params.title}`);
-      }
-      return matchingTitle;
-    };
-    const result = await getBookByTitle();
-    return res.status(200).json(result);
+      )
+    );
+
+    if (!matchingTitle) {
+      return res.status(404).json({ message: "Title not found." });
+    }
+    return res.status(200).json(matchingTitle);
   } catch (error) {
-    return res.status(404).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 });
 
-// Get book review based on ISBN
+// Route to get book reviews based on ISBN
 public_users.get('/review/:isbn', (req, res) => {
   const targetISBN = req.params.isbn;
   if (books[targetISBN]) {
-    return res.status(200).json(books[targetISBN].reviews);
+    return res.status(200).send(JSON.stringify(books[targetISBN].reviews, null, 4));
   } else {
-    return res.status(404).json({ message: `ISBN not found: ${targetISBN}` });
+    return res.status(404).json({ message: "ISBN not found." });
   }
 });
 
