@@ -88,80 +88,67 @@ public_users.get('/review/:isbn', function (req, res) {
 // Tasks 10-13: Async/Await & Axios Implementations
 // ==========================================
 
-// Task 10: Get all books using async/await
-public_users.get('/server/books', async (req, res) => {
+// Internal source route for Axios requests
+public_users.get("/server/books", function (req, res) {
+  res.json(books);
+});
+
+// Task 10: Get all books using async/await and Axios
+public_users.get('/server/', async function (req, res) {
   try {
-    const getBooks = async () => books;
-    const allBooks = await getBooks();
-    return res.status(200).send(JSON.stringify(allBooks, null, 4));
+    const response = await axios.get("http://localhost:5000/server/books");
+    res.send(JSON.stringify(response.data, null, 4));
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Error retrieving books" });
   }
 });
 
-// Task 11: Get book details based on ISBN using async/await (Named helper function as requested by rubric)
-const getBookByISBN = async (isbn) => {
-  if (books[isbn]) {
-    return books[isbn];
-  } else {
-    throw new Error("ISBN not found.");
-  }
-};
-
-public_users.get('/server/isbn/:isbn', async (req, res) => {
+// Task 11: Get book details based on ISBN using async/await and Axios
+public_users.get('/server/isbn/:isbn', async function (req, res) {
+  const isbn = req.params.isbn;
   try {
-    const book = await getBookByISBN(req.params.isbn);
-    return res.status(200).json(book);
-  } catch (error) {
-    return res.status(404).json({ message: error.message });
-  }
-});
-
-// Task 12: Get book details based on author using async/await (Named helper function)
-const getBooksByAuthor = async (author) => {
-  let booksByAuthor = [];
-  Object.keys(books).forEach((key) => {
-    if (books[key].author === author) {
-      booksByAuthor.push(books[key]);
+    const response = await axios.get("http://localhost:5000/server/books");
+    const book = response.data[isbn];
+    if (!book) {
+      return res.status(404).json({ message: "Book not found" });
     }
-  });
-  if (booksByAuthor.length > 0) {
-    return booksByAuthor;
-  } else {
-    throw new Error("Author not found");
-  }
-};
-
-public_users.get('/server/author/:author', async (req, res) => {
-  try {
-    const result = await getBooksByAuthor(req.params.author);
-    return res.status(200).send(JSON.stringify(result, null, 4));
+    res.send(JSON.stringify(book, null, 4));
   } catch (error) {
-    return res.status(404).json({ message: error.message });
+    res.status(500).json({ message: "Error retrieving book" });
   }
 });
 
-// Task 13: Get all books based on title using async/await (Named helper function)
-const getBooksByTitle = async (title) => {
-  let booksByTitle = [];
-  Object.keys(books).forEach((key) => {
-    if (books[key].title === title) {
-      booksByTitle.push(books[key]);
-    }
-  });
-  if (booksByTitle.length > 0) {
-    return booksByTitle;
-  } else {
-    throw new Error("Title not found");
-  }
-};
-
-public_users.get('/server/title/:title', async (req, res) => {
+// Task 12: Get book details based on author using async/await and Axios
+public_users.get('/server/author/:author', async function (req, res) {
+  const author = req.params.author;
   try {
-    const result = await getBooksByTitle(req.params.title);
-    return res.status(200).send(JSON.stringify(result, null, 4));
+    const response = await axios.get("http://localhost:5000/server/books");
+    const result = Object.keys(response.data)
+      .filter((key) => response.data[key].author === author)
+      .map((key) => response.data[key]);
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Author not found" });
+    }
+    res.send(JSON.stringify(result, null, 4));
   } catch (error) {
-    return res.status(404).json({ message: error.message });
+    res.status(500).json({ message: "Error retrieving books" });
+  }
+});
+
+// Task 13: Get all books based on title using async/await and Axios
+public_users.get('/server/title/:title', async function (req, res) {
+  const title = req.params.title;
+  try {
+    const response = await axios.get("http://localhost:5000/server/books");
+    const result = Object.keys(response.data)
+      .filter((key) => response.data[key].title === title)
+      .map((key) => response.data[key]);
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Title not found" });
+    }
+    res.send(JSON.stringify(result, null, 4));
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving books" });
   }
 });
 
