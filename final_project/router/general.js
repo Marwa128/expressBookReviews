@@ -5,132 +5,78 @@ let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
 
-// Helper function to check if the username already exists in the system
 const doesExist = (username) => {
   return users.some((user) => user.username === username);
 };
 
-// Helper function to filter books by author
-const fetchBooksByAuthor = (authorName) => {
-  return new Promise((resolve, reject) => {
-    let booksByAuthor = [];
-    let keys = Object.keys(books);
-    keys.forEach((key) => {
-      if (books[key].author === authorName) {
-        booksByAuthor.push(books[key]);
-      }
-    });
-    if (booksByAuthor.length > 0) {
-      resolve(booksByAuthor);
-    } else {
-      reject(new Error("Author not found"));
-    }
-  });
-};
-
-// Helper function to filter books by title
-const fetchBooksByTitle = (titleName) => {
-  return new Promise((resolve, reject) => {
-    let booksByTitle = [];
-    let keys = Object.keys(books);
-    keys.forEach((key) => {
-      if (books[key].title === titleName) {
-        booksByTitle.push(books[key]);
-      }
-    });
-    if (booksByTitle.length > 0) {
-      resolve(booksByTitle);
-    } else {
-      reject(new Error("Title not found"));
-    }
-  });
-};
-
-// Helper function to get book by ISBN
-const fetchBookByISBN = (isbnNum) => {
-  return new Promise((resolve, reject) => {
-    if (books[isbnNum]) {
-      resolve(books[isbnNum]);
-    } else {
-      reject(new Error("ISBN not found"));
-    }
-  });
-};
-
-// Route: Register a new user
+// Task 6: Register a new user
 public_users.post("/register", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  if (!username || !password) {
-    return res.status(400).json({ message: "Missing username or password" });
-  } else if (doesExist(username) || isValid(username)) {
-    return res.status(409).json({ message: "User already exists." });
-  } else {
-    users.push({ username: username, password: password });
-    return res.status(200).json({ message: "Customer successfully registered. Now you can login" });
+  if (username && password) {
+    if (!doesExist(username)) {
+      users.push({ "username": username, "password": password });
+      return res.status(200).json({ message: "Customer successfully registered. Now you can login" });
+    } else {
+      return res.status(404).json({ message: "User already exists!" });
+    }
   }
+  return res.status(404).json({ message: "Unable to register user." });
 });
 
-// Route: Get the book list available in the shop
+// Task 1: Get the book list available in the shop
 public_users.get('/', function (req, res) {
   return res.status(200).send(JSON.stringify(books, null, 4));
 });
 
-// Task 10: Get the list of all books available in the shop using async/await
-public_users.get('/server/books', async (req, res) => {
-  try {
-    const getBooks = new Promise((resolve, reject) => {
-      resolve(books);
-    });
-    const allBooks = await getBooks;
-    return res.status(200).send(JSON.stringify(allBooks, null, 4));
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
+// Task 10: Get all books using Promise / async-await
+public_users.get('/books', function (req, res) {
+  const getBooks = new Promise((resolve, reject) => {
+    resolve(books);
+  });
+  getBooks.then((booksList) => {
+    res.send(JSON.stringify(booksList, null, 4));
+  }).catch((err) => {
+    res.status(500).json({ message: "Error fetching books" });
+  });
 });
 
-// Route: Get book details based on ISBN
+// Task 2: Get book details based on ISBN
 public_users.get('/isbn/:isbn', function (req, res) {
-  const targetISBN = req.params.isbn;
-  if (!targetISBN) {
-    return res.status(400).json({ message: "Invalid ISBN parameter." });
-  }
-  if (books[targetISBN]) {
-    return res.status(200).json(books[targetISBN]);
+  const isbn = req.params.isbn;
+  if (books[isbn]) {
+    return res.status(200).send(JSON.stringify(books[isbn], null, 4));
   } else {
-    return res.status(404).json({ message: "ISBN not found." });
+    return res.status(404).json({ message: "Book not found" });
   }
 });
 
-// Task 11: Get book details based on ISBN using async/await
-public_users.get('/server/isbn/:isbn', async (req, res) => {
-  const targetISBN = req.params.isbn;
-  
-  // Validate input parameter format/presence
-  if (!targetISBN || targetISBN.trim() === "") {
-    return res.status(400).json({ message: "Invalid or missing ISBN parameter." });
-  }
+// Task 11: Get book details based on ISBN using Promise / async-await
+public_users.get('/isbn/async/:isbn', function (req, res) {
+  const isbn = req.params.isbn;
+  const getBookByISBN = new Promise((resolve, reject) => {
+    if (books[isbn]) {
+      resolve(books[isbn]);
+    } else {
+      reject({ status: 404, message: "Book not found" });
+    }
+  });
 
-  try {
-    // Using modular helper function with async/await
-    const book = await fetchBookByISBN(targetISBN);
-    return res.status(200).json(book);
-  } catch (error) {
-    return res.status(404).json({ message: error.message });
-  }
+  getBookByISBN.then((book) => {
+    res.send(JSON.stringify(book, null, 4));
+  }).catch((err) => {
+    res.status(err.status || 500).json({ message: err.message });
+  });
 });
 
-// Route: Get book details based on author
+// Task 3: Get book details based on author
 public_users.get('/author/:author', function (req, res) {
-  const authorParam = req.params.author;
-  if (!authorParam) {
-    return res.status(400).json({ message: "Invalid author parameter." });
-  }
+  const author = req.params.author;
   let booksByAuthor = [];
   let keys = Object.keys(books);
   keys.forEach((key) => {
-    if (books[key].author === authorParam) {
+    if (books[key].author === author) {
       booksByAuthor.push(books[key]);
     }
   });
@@ -141,34 +87,38 @@ public_users.get('/author/:author', function (req, res) {
   }
 });
 
-// Task 12: Get book details based on author using async/await
-public_users.get('/server/author/:author', async (req, res) => {
-  const authorParam = req.params.author;
+// Task 12: Get book details based on author using Promise / async-await
+public_users.get('/author/async/:author', function (req, res) {
+  const author = req.params.author;
+  const getBooksByAuthor = new Promise((resolve, reject) => {
+    let booksByAuthor = [];
+    let keys = Object.keys(books);
+    keys.forEach((key) => {
+      if (books[key].author === author) {
+        booksByAuthor.push(books[key]);
+      }
+    });
+    if (booksByAuthor.length > 0) {
+      resolve(booksByAuthor);
+    } else {
+      reject({ status: 404, message: "Author not found" });
+    }
+  });
 
-  // Validate input parameter
-  if (!authorParam || authorParam.trim() === "") {
-    return res.status(400).json({ message: "Invalid or missing author parameter." });
-  }
-
-  try {
-    // Using modular helper function with async/await
-    const result = await fetchBooksByAuthor(authorParam);
-    return res.status(200).send(JSON.stringify(result, null, 4));
-  } catch (error) {
-    return res.status(404).json({ message: error.message });
-  }
+  getBooksByAuthor.then((booksList) => {
+    res.send(JSON.stringify(booksList, null, 4));
+  }).catch((err) => {
+    res.status(err.status || 500).json({ message: err.message });
+  });
 });
 
-// Route: Get all books based on title
+// Task 4: Get all books based on title
 public_users.get('/title/:title', function (req, res) {
-  const titleParam = req.params.title;
-  if (!titleParam) {
-    return res.status(400).json({ message: "Invalid title parameter." });
-  }
+  const title = req.params.title;
   let booksByTitle = [];
   let keys = Object.keys(books);
   keys.forEach((key) => {
-    if (books[key].title === titleParam) {
+    if (books[key].title === title) {
       booksByTitle.push(books[key]);
     }
   });
@@ -179,29 +129,36 @@ public_users.get('/title/:title', function (req, res) {
   }
 });
 
-// Task 13: Get all books based on title using async/await
-public_users.get('/server/title/:title', async (req, res) => {
-  const titleParam = req.params.title;
+// Task 13: Get all books based on title using Promise / async-await
+public_users.get('/title/async/:title', function (req, res) {
+  const title = req.params.title;
+  const getBooksByTitle = new Promise((resolve, reject) => {
+    let booksByTitle = [];
+    let keys = Object.keys(books);
+    keys.forEach((key) => {
+      if (books[key].title === title) {
+        booksByTitle.push(books[key]);
+      }
+    });
+    if (booksByTitle.length > 0) {
+      resolve(booksByTitle);
+    } else {
+      reject({ status: 404, message: "Title not found" });
+    }
+  });
 
-  // Validate input parameter
-  if (!titleParam || titleParam.trim() === "") {
-    return res.status(400).json({ message: "Invalid or missing title parameter." });
-  }
-
-  try {
-    // Using modular helper function with async/await
-    const result = await fetchBooksByTitle(titleParam);
-    return res.status(200).send(JSON.stringify(result, null, 4));
-  } catch (error) {
-    return res.status(404).json({ message: error.message });
-  }
+  getBooksByTitle.then((booksList) => {
+    res.send(JSON.stringify(booksList, null, 4));
+  }).catch((err) => {
+    res.status(err.status || 500).json({ message: err.message });
+  });
 });
 
-// Route: Get book review based on ISBN
+// Task 5: Get book review
 public_users.get('/review/:isbn', function (req, res) {
-  const targetISBN = req.params.isbn;
-  if (books[targetISBN]) {
-    return res.status(200).send(JSON.stringify(books[targetISBN].reviews, null, 4));
+  const isbn = req.params.isbn;
+  if (books[isbn]) {
+    return res.status(200).send(JSON.stringify(books[isbn].reviews, null, 4));
   } else {
     return res.status(404).json({ message: "Book not found" });
   }
