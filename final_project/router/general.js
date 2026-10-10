@@ -10,6 +10,53 @@ const doesExist = (username) => {
   return users.some((user) => user.username === username);
 };
 
+// Helper function to filter books by author
+const fetchBooksByAuthor = (authorName) => {
+  return new Promise((resolve, reject) => {
+    let booksByAuthor = [];
+    let keys = Object.keys(books);
+    keys.forEach((key) => {
+      if (books[key].author === authorName) {
+        booksByAuthor.push(books[key]);
+      }
+    });
+    if (booksByAuthor.length > 0) {
+      resolve(booksByAuthor);
+    } else {
+      reject(new Error("Author not found"));
+    }
+  });
+};
+
+// Helper function to filter books by title
+const fetchBooksByTitle = (titleName) => {
+  return new Promise((resolve, reject) => {
+    let booksByTitle = [];
+    let keys = Object.keys(books);
+    keys.forEach((key) => {
+      if (books[key].title === titleName) {
+        booksByTitle.push(books[key]);
+      }
+    });
+    if (booksByTitle.length > 0) {
+      resolve(booksByTitle);
+    } else {
+      reject(new Error("Title not found"));
+    }
+  });
+};
+
+// Helper function to get book by ISBN
+const fetchBookByISBN = (isbnNum) => {
+  return new Promise((resolve, reject) => {
+    if (books[isbnNum]) {
+      resolve(books[isbnNum]);
+    } else {
+      reject(new Error("ISBN not found"));
+    }
+  });
+};
+
 // Route: Register a new user
 public_users.post("/register", (req, res) => {
   const username = req.body.username;
@@ -33,8 +80,10 @@ public_users.get('/', function (req, res) {
 // Task 10: Get the list of all books available in the shop using async/await
 public_users.get('/server/books', async (req, res) => {
   try {
-    // Directly use async/await to retrieve the books object
-    const allBooks = await books;
+    const getBooks = new Promise((resolve, reject) => {
+      resolve(books);
+    });
+    const allBooks = await getBooks;
     return res.status(200).send(JSON.stringify(allBooks, null, 4));
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -44,6 +93,9 @@ public_users.get('/server/books', async (req, res) => {
 // Route: Get book details based on ISBN
 public_users.get('/isbn/:isbn', function (req, res) {
   const targetISBN = req.params.isbn;
+  if (!targetISBN) {
+    return res.status(400).json({ message: "Invalid ISBN parameter." });
+  }
   if (books[targetISBN]) {
     return res.status(200).json(books[targetISBN]);
   } else {
@@ -54,21 +106,27 @@ public_users.get('/isbn/:isbn', function (req, res) {
 // Task 11: Get book details based on ISBN using async/await
 public_users.get('/server/isbn/:isbn', async (req, res) => {
   const targetISBN = req.params.isbn;
+  
+  // Validate input parameter format/presence
+  if (!targetISBN || targetISBN.trim() === "") {
+    return res.status(400).json({ message: "Invalid or missing ISBN parameter." });
+  }
+
   try {
-    // Fetching book by ISBN asynchronously
-    const book = await books[targetISBN];
-    if (!book) {
-      return res.status(404).json({ message: "ISBN not found." });
-    }
+    // Using modular helper function with async/await
+    const book = await fetchBookByISBN(targetISBN);
     return res.status(200).json(book);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(404).json({ message: error.message });
   }
 });
 
 // Route: Get book details based on author
 public_users.get('/author/:author', function (req, res) {
   const authorParam = req.params.author;
+  if (!authorParam) {
+    return res.status(400).json({ message: "Invalid author parameter." });
+  }
   let booksByAuthor = [];
   let keys = Object.keys(books);
   keys.forEach((key) => {
@@ -86,24 +144,27 @@ public_users.get('/author/:author', function (req, res) {
 // Task 12: Get book details based on author using async/await
 public_users.get('/server/author/:author', async (req, res) => {
   const authorParam = req.params.author;
-  try {
-    // Filtering books by author using async/await directly
-    const matchingBooks = await Object.values(books).filter(
-      (book) => book.author === authorParam
-    );
 
-    if (matchingBooks.length === 0) {
-      return res.status(404).json({ message: "Author not found" });
-    }
-    return res.status(200).send(JSON.stringify(matchingBooks, null, 4));
+  // Validate input parameter
+  if (!authorParam || authorParam.trim() === "") {
+    return res.status(400).json({ message: "Invalid or missing author parameter." });
+  }
+
+  try {
+    // Using modular helper function with async/await
+    const result = await fetchBooksByAuthor(authorParam);
+    return res.status(200).send(JSON.stringify(result, null, 4));
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(404).json({ message: error.message });
   }
 });
 
 // Route: Get all books based on title
 public_users.get('/title/:title', function (req, res) {
   const titleParam = req.params.title;
+  if (!titleParam) {
+    return res.status(400).json({ message: "Invalid title parameter." });
+  }
   let booksByTitle = [];
   let keys = Object.keys(books);
   keys.forEach((key) => {
@@ -121,18 +182,18 @@ public_users.get('/title/:title', function (req, res) {
 // Task 13: Get all books based on title using async/await
 public_users.get('/server/title/:title', async (req, res) => {
   const titleParam = req.params.title;
-  try {
-    // Finding books by title using async/await directly
-    const matchingBooks = await Object.values(books).filter(
-      (book) => book.title === titleParam
-    );
 
-    if (matchingBooks.length === 0) {
-      return res.status(404).json({ message: "Title not found" });
-    }
-    return res.status(200).send(JSON.stringify(matchingBooks, null, 4));
+  // Validate input parameter
+  if (!titleParam || titleParam.trim() === "") {
+    return res.status(400).json({ message: "Invalid or missing title parameter." });
+  }
+
+  try {
+    // Using modular helper function with async/await
+    const result = await fetchBooksByTitle(titleParam);
+    return res.status(200).send(JSON.stringify(result, null, 4));
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(404).json({ message: error.message });
   }
 });
 
